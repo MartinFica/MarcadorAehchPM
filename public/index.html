@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AehCh PM</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #111418;
+    --panel: #1b2027;
+    --text: #f2f4f7;
+    --muted: #9aa4b2;
+    --rojo: #d7263d;
+    --rojo-dark: #7a1522;
+    --azul: #1f6fd1;
+    --azul-dark: #123f78;
+    --amarilla: #f5c518;
+    --ok: #2fbf71;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button {
+    font: inherit;
+    color: inherit;
+    border: 0;
+    border-radius: 10px;
+    background: rgba(255,255,255,.12);
+    padding: .6em .9em;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  button:hover { background: rgba(255,255,255,.2); }
+  button:active { transform: scale(.96); }
+
+  /* Barra superior */
+  .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px;
+    background: var(--panel);
+  }
+  .top .title { font-weight: 700; letter-spacing: .04em; }
+  .top .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Temporizador */
+  .timer-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 16px 4px;
+    gap: 8px;
+  }
+  .timer {
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    font-size: clamp(56px, 12vw, 150px);
+    line-height: 1;
+    cursor: pointer;
+  }
+  .timer.running { color: var(--ok); }
+  .timer.expired { color: var(--rojo); }
+  .timer-controls { display: flex; gap: 8px; }
+  .timer-controls button { min-width: 110px; }
+
+  .banner {
+    min-height: 1.6em;
+    font-size: clamp(18px, 3vw, 30px);
+    font-weight: 700;
+    text-align: center;
+    color: var(--amarilla);
+  }
+
+  /* Luchadores */
+  .fighters {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 12px;
+    padding: 8px 16px 16px;
+    min-height: 0;
+  }
+  .fighter {
+    border-radius: var(--radius);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .fighter.rojo { background: linear-gradient(160deg, var(--rojo), var(--rojo-dark)); }
+  .fighter.azul { background: linear-gradient(200deg, var(--azul), var(--azul-dark)); }
+  .fighter.winner { outline: 6px solid var(--amarilla); }
+  .name {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    color: var(--text);
+    text-align: center;
+    font: inherit;
+    font-size: clamp(20px, 3vw, 36px);
+    font-weight: 700;
+    border-bottom: 2px solid rgba(255,255,255,.3);
+  }
+  .name:focus { outline: none; border-bottom-color: #fff; }
+  .score {
+    font-variant-numeric: tabular-nums;
+    font-weight: 900;
+    font-size: clamp(64px, 11vw, 170px);
+    line-height: 1;
+  }
+  .points { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .points button {
+    font-size: clamp(18px, 2.4vw, 28px);
+    font-weight: 700;
+    min-width: 64px;
+    background: rgba(0,0,0,.25);
+  }
+  .points button:hover { background: rgba(0,0,0,.4); }
+  .flags { display: flex; gap: 6px; justify-content: center; }
+  .flag {
+    background: rgba(0,0,0,.25);
+    padding: 5px 6px;
+    line-height: 0;
+  }
+  .flag:hover { background: rgba(0,0,0,.4); }
+  .flag svg { width: clamp(20px, 2.4vw, 30px); height: auto; opacity: .7; transition: opacity .15s, filter .15s; }
+  .flag .pole { fill: #cfd4da; }
+  .flag .cloth { fill: currentColor; transition: fill .15s; }
+  .flag.amarilla { color: #7a6420; }
+  .flag.roja { color: #7a1f1f; }
+  .flag.on { background: rgba(0,0,0,.45); }
+  .flag.on svg { opacity: 1; filter: drop-shadow(0 0 6px currentColor); }
+  .flag.amarilla.on { color: var(--amarilla); }
+  .flag.roja.on { color: #ff2d2d; }
+  .flag.on .cloth { fill: currentColor; stroke: #fff; stroke-width: .8; }
+
+  /* Columna central: dobles */
+  .middle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 0 4px;
+  }
+  .middle .label { color: var(--muted); font-size: 14px; text-transform: uppercase; letter-spacing: .1em; }
+  .doubles {
+    font-size: clamp(40px, 6vw, 80px);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .doubles.limit { color: var(--amarilla); }
+  .middle .max { color: var(--muted); font-size: 14px; }
+  .logo { width: clamp(160px, 28vw, 440px); height: auto; margin-bottom: 8px; }
+  .middle button { min-width: 90px; }
+
+  /* Ajustes */
+  dialog {
+    background: var(--panel);
+    color: var(--text);
+    border: 0;
+    border-radius: var(--radius);
+    padding: 20px;
+    width: min(420px, calc(100vw - 32px));
+  }
+  dialog::backdrop { background: rgba(0,0,0,.6); }
+  dialog h2 { margin: 0 0 12px; }
+  dialog label { display: block; margin: 12px 0 4px; color: var(--muted); }
+  dialog input {
+    font: inherit;
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,.2);
+    background: var(--bg);
+    color: var(--text);
+  }
+  dialog .row { display: flex; gap: 8px; align-items: center; }
+  dialog .row input { width: 90px; }
+  dialog .hint { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  dialog .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+  dialog .primary { background: var(--azul); }
+  .shortcuts { color: var(--muted); font-size: 13px; line-height: 1.6; margin-top: 16px; }
+  kbd {
+    background: var(--bg);
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 4px;
+    padding: 0 5px;
+    font-size: 12px;
+  }
+
+  /* Pantallas angostas (celular vertical) */
+  @media (max-width: 700px) {
+    .fighters { grid-template-columns: 1fr 1fr; }
+    .middle { grid-column: 1 / -1; grid-row: 2; flex-direction: row; flex-wrap: wrap; }
+    .logo { width: 110px; margin: 0; }
+    .timer-controls button { min-width: 0; }
+  }
+</style>
+</head>
+<body>
+  <header class="top">
+    <div class="title">AehCh PM</div>
+    <div class="actions">
+      <button id="undo" title="Deshacer (Z)">↶ Deshacer</button>
+      <button id="newMatch" title="Nuevo combate">Nuevo combate</button>
+      <button id="settingsBtn" title="Ajustes">⚙ Ajustes</button>
+      <button id="fullscreen" title="Pantalla completa">⛶</button>
+    </div>
+  </header>
+
+  <section class="timer-wrap">
+    <div id="timer" class="timer" title="Iniciar / pausar (Espacio)">3:00</div>
+    <div class="timer-controls">
+      <button id="startStop">▶ Iniciar</button>
+      <button id="resetTimer">Reiniciar tiempo</button>
+    </div>
+    <div id="banner" class="banner"></div>
+  </section>
+
+  <main class="fighters">
+    <section class="fighter rojo" data-side="rojo">
+      <input class="name" id="name-rojo" value="Rojo" aria-label="Nombre luchador rojo">
+      <div class="score" id="score-rojo">0</div>
+      <div class="points">
+        <button data-add="1">+1</button>
+        <button data-add="2">+2</button>
+        <button data-add="3">+3</button>
+        <button data-add="-1">−1</button>
+      </div>
+      <div class="flags">
+        <button class="flag amarilla" data-flag="0" title="Amonestación" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect class="pole" x="4" y="2" width="2" height="20" rx="1"/><path class="cloth" d="M6 3h13l-3 4.5 3 4.5H6z"/></svg></button>
+        <button class="flag amarilla" data-flag="1" title="Amonestación" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect class="pole" x="4" y="2" width="2" height="20" rx="1"/><path class="cloth" d="M6 3h13l-3 4.5 3 4.5H6z"/></svg></button>
+        <button class="flag roja" data-flag="2" title="Penalización" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect class="pole" x="4" y="2" width="2" height="20" rx="1"/><path class="cloth" d="M6 3h13l-3 4.5 3 4.5H6z"/></svg></button>
+      </div>
+    </section>
+
+    <section class="middle">
+      <img class="logo" src="escudo.png" alt="Escudo AEHCH Puerto Montt">
+      <div class="label">Dobles</div>
+      <div class="doubles" id="doubles">0</div>
+      <div class="max" id="maxDoublesLabel"></div>
+      <button id="addDouble" title="Doble (D)">+ Doble</button>
+      <button id="removeDouble">− Doble</button>
+    </section>
+
+    <section class="fighter azul" data-side="azul">
+      <input class="name" id="name-azul" value="Azul" aria-label="Nombre luchador azul">
+      <div class="score" id="score-azul">0</div>
+      <div class="points">
+        <button data-add="1">+1</button>
+        <button data-add="2">+2</button>
+        <button data-add="3">+3</button>
+        <button data-add="-1">−1</button>
+      </div>
+      <div class="flags">
+        <button class="flag amarilla" data-flag="0" title="Amonestación" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect class="pole" x="4" y="2" width="2" height="20" rx="1"/><path class="cloth" d="M6 3h13l-3 4.5 3 4.5H6z"/></svg></button>
+        <button class="flag amarilla" data-flag="1" title="Amonestación" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect class="pole" x="4" y="2" width="2" height="20" rx="1"/><path class="cloth" d="M6 3h13l-3 4.5 3 4.5H6z"/></svg></button>
+        <button class="flag roja" data-flag="2" title="Penalización" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect class="pole" x="4" y="2" width="2" height="20" rx="1"/><path class="cloth" d="M6 3h13l-3 4.5 3 4.5H6z"/></svg></button>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="settings">
+    <form method="dialog" id="settingsForm">
+      <h2>Ajustes</h2>
+      <label>Duración del combate</label>
+      <div class="row">
+        <input type="number" id="cfgMin" min="0" max="99" step="1"> min
+        <input type="number" id="cfgSec" min="0" max="59" step="1"> seg
+      </div>
+      <label for="cfgTarget">Puntos para ganar</label>
+      <input type="number" id="cfgTarget" min="0" max="99" step="1">
+      <div class="hint">0 = sin límite</div>
+      <label for="cfgDoubles">Máximo de dobles</label>
+      <input type="number" id="cfgDoubles" min="0" max="99" step="1">
+      <div class="hint">0 = sin límite</div>
+      <div class="shortcuts">
+        <strong>Atajos de teclado</strong><br>
+        <kbd>Espacio</kbd> iniciar/pausar ·
+        <kbd>D</kbd> doble ·
+        <kbd>Z</kbd> deshacer<br>
+        Rojo: <kbd>Q</kbd> +1 <kbd>W</kbd> +2 <kbd>E</kbd> +3 <kbd>A</kbd> −1<br>
+        Azul: <kbd>P</kbd> +1 <kbd>O</kbd> +2 <kbd>I</kbd> +3 <kbd>L</kbd> −1
+      </div>
+      <div class="buttons">
+        <button value="cancel" formnovalidate>Cancelar</button>
+        <button value="save" class="primary">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+<script>
+(() => {
+  const STORAGE_KEY = 'marcador-hema-v3';
+  const SIDES = ['rojo', 'azul'];
+
+  const defaultConfig = { duration: 180, target: 15, maxDoubles: 5 };
+
+  function freshMatch(config) {
+    return {
+      config,
+      rojo: { name: 'Rojo', score: 0, flags: [false, false, false] },
+      azul: { name: 'Azul', score: 0, flags: [false, false, false] },
+      doubles: 0,
+      remainingMs: config.duration * 1000,
+    };
+  }
+
+  let state = load() || freshMatch({ ...defaultConfig });
+  let history = [];          // instantáneas para deshacer (sin el tiempo)
+  let running = false;
+  let lastTick = 0;
+  let expiredNotified = state.remainingMs <= 0;
+
+  // ---------- Persistencia ----------
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+  }
+
+  // ---------- Deshacer ----------
+  function snapshot() {
+    const { remainingMs, ...rest } = state;
+    history.push(JSON.stringify(rest));
+    if (history.length > 200) history.shift();
+  }
+  function undo() {
+    const prev = history.pop();
+    if (!prev) return;
+    state = { ...JSON.parse(prev), remainingMs: state.remainingMs };
+    render();
+  }
+
+  // ---------- Acciones ----------
+  function addPoints(side, n) {
+    snapshot();
+    state[side].score = Math.max(0, state[side].score + n);
+    render();
+    checkLimits();
+  }
+  // Banderas: 0 y 1 amarillas (amonestación), 2 roja (penalización)
+  function toggleFlag(side, i) {
+    snapshot();
+    state[side].flags[i] = !state[side].flags[i];
+    render();
+  }
+  function changeDoubles(delta) {
+    if (delta < 0 && state.doubles === 0) return;
+    snapshot();
+    state.doubles += delta;
+    render();
+    checkLimits();
+  }
+  function checkLimits() {
+    // Detiene el reloj al alcanzar puntos para ganar o máximo de dobles
+    if (running && (winnerByPoints() || doublesReached())) stopTimer();
+  }
+
+  // ---------- Temporizador ----------
+  function startTimer() {
+    if (state.remainingMs <= 0) return;
+    running = true;
+    lastTick = performance.now();
+    requestAnimationFrame(tick);
+    render();
+  }
+  function stopTimer() {
+    running = false;
+    render();
+  }
+  function toggleTimer() { running ? stopTimer() : startTimer(); }
+  function resetTimer() {
+    running = false;
+    state.remainingMs = state.config.duration * 1000;
+    expiredNotified = false;
+    render();
+  }
+  function tick(now) {
+    if (!running) return;
+    state.remainingMs -= now - lastTick;
+    lastTick = now;
+    if (state.remainingMs <= 0) {
+      state.remainingMs = 0;
+      running = false;
+      if (!expiredNotified) { expiredNotified = true; beep(); }
+    }
+    renderTimer();
+    if (running) requestAnimationFrame(tick);
+    else render();
+  }
+  function formatTime(ms) {
+    const total = Math.ceil(ms / 1000);
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+  }
+  function beep() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = 880;
+      gain.gain.value = 0.2;
+      osc.connect(gain).connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 1.2);
+    } catch {}
+  }
+
+  // ---------- Estado del combate ----------
+  function winnerByPoints() {
+    const t = state.config.target;
+    if (!t) return null;
+    if (state.rojo.score >= t && state.rojo.score > state.azul.score) return 'rojo';
+    if (state.azul.score >= t && state.azul.score > state.rojo.score) return 'azul';
+    return null;
+  }
+  function doublesReached() {
+    const max = state.config.maxDoubles;
+    return max > 0 && state.doubles >= max;
+  }
+  function bannerText() {
+    const w = winnerByPoints();
+    if (w) return `🏆 Gana ${state[w].name}`;
+    if (doublesReached()) return `Máximo de dobles alcanzado (${state.doubles})`;
+    if (state.remainingMs <= 0) {
+      const r = state.rojo.score, a = state.azul.score;
+      if (r === a) return 'Tiempo · Empate';
+      return `Tiempo · Gana ${state[r > a ? 'rojo' : 'azul'].name}`;
+    }
+    return '';
+  }
+  function leader() {
+    const w = winnerByPoints();
+    if (w) return w;
+    if (state.remainingMs <= 0 && state.rojo.score !== state.azul.score) {
+      return state.rojo.score > state.azul.score ? 'rojo' : 'azul';
+    }
+    return null;
+  }
+
+  // ---------- Render ----------
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const timerEl = $('#timer');
+  const startStopEl = $('#startStop');
+
+  function renderTimer() {
+    timerEl.textContent = formatTime(state.remainingMs);
+    timerEl.classList.toggle('running', running);
+    timerEl.classList.toggle('expired', state.remainingMs <= 0);
+  }
+
+  function render() {
+    renderTimer();
+    startStopEl.textContent = running ? '⏸ Pausar' : '▶ Iniciar';
+    const win = leader();
+    for (const side of SIDES) {
+      const panel = $(`.fighter[data-side="${side}"]`);
+      $(`#score-${side}`).textContent = state[side].score;
+      const nameEl = $(`#name-${side}`);
+      if (document.activeElement !== nameEl) nameEl.value = state[side].name;
+      panel.querySelectorAll('[data-flag]').forEach(btn => {
+        const on = state[side].flags[Number(btn.dataset.flag)];
+        btn.classList.toggle('on', on);
+        btn.setAttribute('aria-pressed', on);
+      });
+      panel.classList.toggle('winner', win === side);
+    }
+    const dEl = $('#doubles');
+    dEl.textContent = state.doubles;
+    dEl.classList.toggle('limit', doublesReached());
+    $('#maxDoublesLabel').textContent =
+      state.config.maxDoubles ? `máx. ${state.config.maxDoubles}` : 'sin límite';
+    $('#banner').textContent = bannerText();
+    save();
+  }
+
+  // ---------- Eventos ----------
+  for (const side of SIDES) {
+    const panel = $(`.fighter[data-side="${side}"]`);
+    panel.querySelectorAll('[data-add]').forEach(btn =>
+      btn.addEventListener('click', () => addPoints(side, Number(btn.dataset.add))));
+    panel.querySelectorAll('[data-flag]').forEach(btn =>
+      btn.addEventListener('click', () => toggleFlag(side, Number(btn.dataset.flag))));
+    const nameEl = $(`#name-${side}`);
+    nameEl.addEventListener('input', () => {
+      state[side].name = nameEl.value.trim() || (side === 'rojo' ? 'Rojo' : 'Azul');
+      $('#banner').textContent = bannerText();
+      save();
+    });
+    nameEl.addEventListener('keydown', e => { if (e.key === 'Enter') nameEl.blur(); });
+  }
+
+  $('#addDouble').addEventListener('click', () => changeDoubles(1));
+  $('#removeDouble').addEventListener('click', () => changeDoubles(-1));
+  startStopEl.addEventListener('click', toggleTimer);
+  timerEl.addEventListener('click', toggleTimer);
+  $('#resetTimer').addEventListener('click', resetTimer);
+  $('#undo').addEventListener('click', undo);
+
+  $('#newMatch').addEventListener('click', () => {
+    if (!confirm('¿Empezar un nuevo combate? Se borrarán puntos, tarjetas y dobles.')) return;
+    const names = { rojo: state.rojo.name, azul: state.azul.name };
+    running = false;
+    state = freshMatch(state.config);
+    // Mantener los nombres es útil si se repite el cruce; se pueden editar igual
+    state.rojo.name = names.rojo;
+    state.azul.name = names.azul;
+    history = [];
+    expiredNotified = false;
+    render();
+  });
+
+  $('#fullscreen').addEventListener('click', () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen?.();
+  });
+
+  // Ajustes
+  const dlg = $('#settings');
+  $('#settingsBtn').addEventListener('click', () => {
+    $('#cfgMin').value = Math.floor(state.config.duration / 60);
+    $('#cfgSec').value = state.config.duration % 60;
+    $('#cfgTarget').value = state.config.target;
+    $('#cfgDoubles').value = state.config.maxDoubles;
+    dlg.showModal();
+  });
+  dlg.addEventListener('close', () => {
+    if (dlg.returnValue !== 'save') return;
+    const min = Math.max(0, parseInt($('#cfgMin').value, 10) || 0);
+    const sec = Math.min(59, Math.max(0, parseInt($('#cfgSec').value, 10) || 0));
+    const duration = min * 60 + sec || defaultConfig.duration;
+    const durationChanged = duration !== state.config.duration;
+    state.config = {
+      duration,
+      target: Math.max(0, parseInt($('#cfgTarget').value, 10) || 0),
+      maxDoubles: Math.max(0, parseInt($('#cfgDoubles').value, 10) || 0),
+    };
+    if (durationChanged && !running) {
+      state.remainingMs = duration * 1000;
+      expiredNotified = false;
+    }
+    render();
+  });
+
+  // Quitar el foco de los botones tras un clic, para que Espacio no los vuelva a activar
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (btn && !dlg.contains(btn)) btn.blur();
+  });
+
+  // Teclado
+  const keymap = {
+    q: () => addPoints('rojo', 1), w: () => addPoints('rojo', 2),
+    e: () => addPoints('rojo', 3), a: () => addPoints('rojo', -1),
+    p: () => addPoints('azul', 1), o: () => addPoints('azul', 2),
+    i: () => addPoints('azul', 3), l: () => addPoints('azul', -1),
+    d: () => changeDoubles(1),
+    z: () => undo(),
+  };
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' || dlg.open) return;
+    if (e.code === 'Space') { e.preventDefault(); toggleTimer(); return; }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); return; }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const fn = keymap[e.key.toLowerCase()];
+    if (fn) { e.preventDefault(); fn(); }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
